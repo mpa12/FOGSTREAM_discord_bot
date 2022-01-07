@@ -94,6 +94,28 @@ class MyBot(commands.Bot):
                 'unsuccessfully'
             )
 
+        @self.event
+        async def on_message(message):
+            if self.user == message.author:
+                return
+
+            commands = [
+                '!help',
+                '!random_fact_text',
+                '!random_fact_img'
+                ]
+            if message.content not in commands:
+                await message.channel.send(
+                    'Я тебя не понимаю - отправь  мне команду'
+                    )
+                log_command(
+                    'on_message',
+                    message.author,
+                    'successfully'
+                )
+            else:
+                await self.process_commands(message)
+
 bot = MyBot(
     command_prefix=settings['prefix'],
     self_bot=False
