@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+import asyncio
+import json
 from config import settings
 from fact_pars import parse
 from log import log_command
@@ -63,7 +65,9 @@ class MyBot(commands.Bot):
                 description="""```Основные команды:```
                 !help - Все доступные команды
                 !random_fact_text - Случайный факт в виде текста
-                !random_fact_img - Бот отправляет рандомную аниме картинку"""
+                !random_fact_img - Бот отправляет рандомную аниме картинку
+                !clear [количество сообщений] - Чистит чат
+                !lvl - узнать количество сообщений"""
             )
             embed.set_author(
                 name="FOGSTREAM",
@@ -80,6 +84,41 @@ class MyBot(commands.Bot):
                 'help',
                 ctx.author,
                 'successfully'
+            )
+
+        @self.command()
+        @commands.has_permissions(administrator=True)
+        # clear chat
+        async def clear(ctx, count):
+            await ctx.channel.purge(limit=int(count)+1)
+            await ctx.channel.send('Сообщения успешно удалены')
+            await asyncio.sleep(1)
+            await ctx.channel.purge(limit=1)
+
+            log_command(
+                f'clear {count}',
+                ctx.author,
+                'successfully'
+            )
+
+        @self.command()
+        # see lvl
+        async def lvl(ctx):
+            with open("lvls.json", "r") as f:
+                id_us = str(ctx.author.id)
+                data = dict(json.load(f))
+                if id_us not in data:
+                    await ctx.channel.send(
+                        f'{ctx.author.mention}, количество сообщений - 0'
+                    )
+                else:
+                    await ctx.channel.send(
+                        f'{ctx.author.mention}, количество сообщений - {data[id_us]}'
+                    )
+            log_command(
+                'lvl',
+                ctx.author,
+                'unsuccessfully'
             )
 
         @self.event
@@ -102,9 +141,11 @@ class MyBot(commands.Bot):
             commands = [
                 '!help',
                 '!random_fact_text',
-                '!random_fact_img'
+                '!random_fact_img',
+                '!clear',
+                '!lvl'
                 ]
-            if message.content not in commands:
+            if message.content.split(' ')[0] not in commands:
                 await message.channel.send(
                     'Я тебя не понимаю - отправь  мне команду'
                     )
@@ -115,6 +156,16 @@ class MyBot(commands.Bot):
                 )
             else:
                 await self.process_commands(message)
+
+            with open("lvls.json", "r") as f:
+                id_us = str(message.author.id)
+                data = dict(json.load(f))
+                if id_us not in data:
+                    data[id_us] = 1
+                else:
+                    data[id_us] += 1
+            with open('lvls.json', 'w') as f:
+                json.dump(data, f)
 
 bot = MyBot(
     command_prefix=settings['prefix'],
