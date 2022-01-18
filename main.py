@@ -5,6 +5,8 @@ import json
 from config import settings
 from fact_pars import parse
 from log import log_command
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
 
 
 class MyBot(commands.Bot):
@@ -65,7 +67,7 @@ class MyBot(commands.Bot):
                 description="""```Основные команды:```
                 !help - Все доступные команды
                 !random_fact_text - Случайный факт в виде текста
-                !random_fact_img - Бот отправляет рандомную аниме картинку
+                !random_fact_img - Случайный факт в виде картинки
                 !clear [количество сообщений] - Чистит чат
                 !lvl - узнать количество сообщений"""
             )
@@ -108,17 +110,42 @@ class MyBot(commands.Bot):
                 id_us = str(ctx.author.id)
                 data = dict(json.load(f))
                 if id_us not in data:
-                    await ctx.channel.send(
-                        f'{ctx.author.mention}, количество сообщений - 0'
-                    )
+                    msg = f'{ctx.author.name}, количество сообщений - 0'
                 else:
-                    await ctx.channel.send(
-                        f'{ctx.author.mention}, количество сообщений - {data[id_us]}'
-                    )
+                    msg = f'{ctx.author.name}, количество сообщений - {data[id_us]}'
+
+                W, H = (1000,200)
+
+                im = Image.new("RGBA",(W,H),"black")
+                draw = ImageDraw.Draw(im)
+
+                font = ImageFont.truetype(
+                    "arial.ttf",
+                    32,
+                    encoding='UTF-8'
+                )
+                w, h = font.getsize(msg)
+                draw.text(
+                    ((W-w-160)/2+160, (H-h)/2),
+                    msg,
+                    font=font,
+                    fill="white"
+                )
+
+                assets = ctx.author.avatar_url_as(size=128)
+                data = BytesIO(await assets.read())
+
+                pfp = Image.open(data)
+                pfp = pfp.resize((150, 150))
+                im.paste(pfp, (25, 25))
+
+                im.save("lvl_img.png", "PNG")
+                await ctx.send(file=discord.File("lvl_img.png"))
+
             log_command(
                 'lvl',
                 ctx.author,
-                'unsuccessfully'
+                'successfully'
             )
 
         @self.event
